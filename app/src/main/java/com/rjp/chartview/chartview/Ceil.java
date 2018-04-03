@@ -20,6 +20,8 @@ public class Ceil {
 
     private String number;
 
+    private int color;
+
     public void setLocation(int left, int right, int top, int bottom){
         this.left = left;
         this.right = right;
@@ -100,5 +102,13 @@ public class Ceil {
 
     public void setNumber(String number) {
         this.number = number;
+    }
+
+    public int getColor() {
+        return color;
+    }
+
+    public void setColor(int color) {
+        this.color = color;
     }
 }

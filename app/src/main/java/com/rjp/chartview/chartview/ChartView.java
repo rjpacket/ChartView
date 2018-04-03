@@ -8,6 +8,7 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
 import android.support.annotation.Px;
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
@@ -141,6 +142,7 @@ public class ChartView extends View {
                 e1.setNumber(String.valueOf(j));
                 if (j == selectedIndex) {
                     e1.setSelected(true);
+                    e1.setColor(Color.RED);
                 }
                 ceils.add(e1);
                 if (preCeil != null && e1.isSelected()) {
@@ -155,6 +157,29 @@ public class ChartView extends View {
         }
         maxWidth = 40 * ceilWidth;
         maxHeight = 300 * ceilHeight;
+    }
+
+    /**
+     * 新增一个隔壁的表格
+     * @param blueCeilsGroup
+     */
+    public void addAnotherChart(List<CeilGroup> blueCeilsGroup){
+        int columnCount = 0;
+        int groupSize = ceilGroups.size();
+        for (int i = 0; i < groupSize; i++) {
+            List<Ceil> oldCeils = ceilGroups.get(i).getCeils();
+            CeilGroup ceilGroup = blueCeilsGroup.get(i);
+            List<Ceil> newCeils = ceilGroup.getCeils();
+            //中间增加一个空的ceil
+            oldCeils.add(new Ceil());
+            for (Ceil newCeil : newCeils) {
+                oldCeils.add(newCeil);
+            }
+            columnCount = oldCeils.size();
+        }
+        maxWidth = columnCount * ceilWidth;
+        maxHeight = groupSize * ceilHeight;
+        computeCeilLocation(0, 0);
     }
 
     @Override
@@ -336,18 +361,9 @@ public class ChartView extends View {
      */
     private void drawCeilText(Canvas canvas, Ceil ceil) {
         textPaint.setColor(ceil.isSelected() ? numberSelectedColor : numberNormalColor);
-        canvas.drawText(ceil.getNumber(), ceil.getCenterX(), ceil.getCenterY(), textPaint);
-    }
-
-    /**
-     * 设置ceil选中的效果
-     *
-     * @param canvas
-     * @param ceil
-     */
-    private void drawCeilSelected(Canvas canvas, Ceil ceil) {
-        if (ceil.isSelected()) {
-            canvas.drawOval(new RectF(ceil.getLeft(), ceil.getTop(), ceil.getRight(), ceil.getBottom()), selectedPaint);
+        String number = ceil.getNumber();
+        if(!TextUtils.isEmpty(number)) {
+            canvas.drawText(number, ceil.getCenterX(), ceil.getCenterY(), textPaint);
         }
     }
 
@@ -362,6 +378,19 @@ public class ChartView extends View {
     }
 
     /**
+     * 设置ceil选中的效果
+     *
+     * @param canvas
+     * @param ceil
+     */
+    private void drawCeilSelected(Canvas canvas, Ceil ceil) {
+        if (ceil.isSelected()) {
+            selectedPaint.setColor(ceil.getColor());
+            canvas.drawOval(new RectF(ceil.getLeft(), ceil.getTop(), ceil.getRight(), ceil.getBottom()), selectedPaint);
+        }
+    }
+
+    /**
      * 绘制ceil的连线
      *
      * @param canvas
@@ -370,6 +399,7 @@ public class ChartView extends View {
     private void drawCeilLinkLine(Canvas canvas, Ceil ceil) {
         Ceil nextCeil = ceil.getNextCeil();
         if (nextCeil != null) {
+            linkLinePaint.setColor(ceil.getColor());
             canvas.drawLine(nextCeil.getCenterX(), nextCeil.getCenterY(), ceil.getCenterX(), ceil.getCenterY(), linkLinePaint);
         }
     }
