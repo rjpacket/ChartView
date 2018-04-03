@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+
+    <HorizontalScrollView
+        android:id="@+id/horizontal_view"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginLeft="80dp"
+        >
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            >
+
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <ListView
+        android:id="@+id/vertical_view"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/horizontal_view"
+        android:scrollbars="none"
+        android:background="#817577"
+        >
+
+    </ListView>
+
+    <com.rjp.chartview.chartview.ChartView
+        android:id="@+id/center_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/horizontal_view"
+        android:layout_toRightOf="@id/vertical_view"
+        />
+</RelativeLayout>

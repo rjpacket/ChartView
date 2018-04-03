@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="ChartView">
+        <attr name="mode" format="integer"/>
+        <attr name="columns" format="integer" />
+        <attr name="ceil_width" format="dimension" />
+        <attr name="ceil_height" format="dimension" />
+        <attr name="number_size" format="dimension" />
+        <attr name="ball_color" format="color" />
+        <attr name="number_normal_color" format="color" />
+        <attr name="number_selected_color" format="color" />
+        <attr name="link_line_color" format="color" />
+        <attr name="link_line_width" format="dimension" />
+        <attr name="stroke_color" format="color" />
+        <attr name="background_color" format="color" />
+    </declare-styleable>
+</resources>
