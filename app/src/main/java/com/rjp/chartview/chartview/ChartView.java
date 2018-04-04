@@ -35,7 +35,6 @@ public class ChartView extends View {
 
     public int mode = MODE_APPEND;
     private List<CeilGroup> ceilGroups = new ArrayList<>();
-    private List<Ceil> selectedCeils = new ArrayList<>();
 
     private int ceilWidth = 100;
     private int ceilHeight = 100;
@@ -67,6 +66,7 @@ public class ChartView extends View {
     private float linkLineWidth;
     private float tempCeilWidth;
     private float tempCeilHeight;
+    private float txtMidValue;
 
     public ChartView(Context context) {
         this(context, null);
@@ -78,7 +78,7 @@ public class ChartView extends View {
     }
 
     private void initView(Context context, AttributeSet attrs) {
-        if(attrs != null) {
+        if (attrs != null) {
             TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.ChartView);
             mode = array.getInt(R.styleable.ChartView_mode, MODE_APPEND);
             columns = array.getInt(R.styleable.ChartView_columns, 8);
@@ -95,9 +95,9 @@ public class ChartView extends View {
         }
 
         screenWidth = context.getResources().getDisplayMetrics().widthPixels;
-        if(mode == MODE_EQUAL) {
+        if (mode == MODE_EQUAL) {
             ceilWidth = ceilHeight = screenWidth / columns;
-        }else if(mode == MODE_APPEND){
+        } else if (mode == MODE_APPEND) {
             ceilWidth = (int) tempCeilWidth;
             ceilHeight = (int) tempCeilHeight;
         }
@@ -124,6 +124,8 @@ public class ChartView extends View {
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setColor(numberNormalColor);
         textPaint.setTextSize(numberTextSize);
+        Paint.FontMetrics fontMetrics = textPaint.getFontMetrics();
+        txtMidValue = (fontMetrics.top + fontMetrics.bottom) / 2;
 
         // 新增部分 start
         ViewConfiguration viewConfiguration = ViewConfiguration.get(context);
@@ -161,9 +163,10 @@ public class ChartView extends View {
 
     /**
      * 新增一个隔壁的表格
+     *
      * @param blueCeilsGroup
      */
-    public void addAnotherChart(List<CeilGroup> blueCeilsGroup){
+    public void addAnotherChart(List<CeilGroup> blueCeilsGroup) {
         int columnCount = 0;
         int groupSize = ceilGroups.size();
         for (int i = 0; i < groupSize; i++) {
@@ -179,7 +182,7 @@ public class ChartView extends View {
         }
         maxWidth = columnCount * ceilWidth;
         maxHeight = groupSize * ceilHeight;
-        computeCeilLocation(0, 0);
+        computeCeilLocation();
     }
 
     @Override
@@ -280,16 +283,13 @@ public class ChartView extends View {
         viewWidth = MeasureSpec.getSize(widthMeasureSpec);
         viewHeight = MeasureSpec.getSize(heightMeasureSpec);
         setMeasuredDimension(viewWidth, viewHeight);
-        computeCeilLocation(0, 0);
+        computeCeilLocation();
     }
 
     /**
      * 计算每一个ceil的位置
-     *
-     * @param dx
-     * @param dy
      */
-    private void computeCeilLocation(int dx, int dy) {
+    private void computeCeilLocation() {
         int groupSize = ceilGroups.size();
         for (int i = 0; i < groupSize; i++) {
             CeilGroup ceilGroup = ceilGroups.get(i);
@@ -297,7 +297,7 @@ public class ChartView extends View {
             int ceilSize = ceils.size();
             for (int j = 0; j < ceilSize; j++) {
                 Ceil ceil = ceils.get(j);
-                ceil.setLocation(ceilWidth * j + dx, ceilWidth * (j + 1) + dx, ceilHeight * i + dy, ceilHeight * (i + 1) + dy);
+                ceil.setLocation(ceilWidth * j, ceilWidth * (j + 1), ceilHeight * i, ceilHeight * (i + 1));
             }
         }
     }
@@ -362,8 +362,8 @@ public class ChartView extends View {
     private void drawCeilText(Canvas canvas, Ceil ceil) {
         textPaint.setColor(ceil.isSelected() ? numberSelectedColor : numberNormalColor);
         String number = ceil.getNumber();
-        if(!TextUtils.isEmpty(number)) {
-            canvas.drawText(number, ceil.getCenterX(), ceil.getCenterY(), textPaint);
+        if (!TextUtils.isEmpty(number)) {
+            canvas.drawText(number, ceil.getCenterX(), ceil.getCenterY() - txtMidValue, textPaint);
         }
     }
 
