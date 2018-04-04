@@ -46,6 +46,5 @@ public class MainActivity extends AppCompatActivity {
             blueCeilsGroup.add(e);
         }
         chartView.addAnotherChart(blueCeilsGroup);
-
     }
 }

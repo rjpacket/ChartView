@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
@@ -11,6 +12,7 @@ import android.support.annotation.Px;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -78,6 +80,17 @@ public class ChartView extends View {
     private Paint leftBackgroundPaint;
     private float leftTxtMidValue;
     private Paint emptyPaint;
+
+    //是否两个手指触摸
+    private boolean isTwoFinger;
+    //矩阵
+    Matrix matrix = new Matrix();
+    float[] m = new float[9];
+    //是否正在拉伸
+    boolean isScaling;
+    //
+    float anchorX, anchorY;
+    boolean firstScale = true;
 
     public ChartView(Context context) {
         this(context, null);
@@ -205,7 +218,6 @@ public class ChartView extends View {
         boolean isTopBarAdd = false;
         //顶部栏也加一个空的cell
         topCells.add(new Cell());
-        int columnCount = 0;
         int groupSize = cellGroups.size();
         for (int i = 0; i < groupSize; i++) {
             List<Cell> oldcells = cellGroups.get(i).getCells();
@@ -223,21 +235,26 @@ public class ChartView extends View {
                 oldcells.add(newcells.get(j));
             }
             isTopBarAdd = true;  //顶部栏的cell只需要添加一次就好
-            columnCount = oldcells.size();
         }
-        maxWidth = columnCount * cellWidth + leftBarWidth;
-        maxHeight = groupSize * cellHeight + topBarHeight;
         computecellLocation();
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        //监听拉伸
+        scaleGestureDetector.onTouchEvent(event);
+        int pointerCount = event.getPointerCount();
+        if (pointerCount > 1) {
+            isTwoFinger = true;
+        }
+
         obtainVelocityTracker();
         int action = event.getAction();
         int x = (int) event.getX();
         int y = (int) event.getY();
         switch (action) {
             case MotionEvent.ACTION_DOWN:
+                isTwoFinger = false;
                 preX = x;
                 preY = y;
                 if (!mScroller.isFinished()) {
@@ -245,11 +262,13 @@ public class ChartView extends View {
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
-                int dx = x - preX;
-                int dy = y - preY;
-                scrollTo(getScrollX() - dx, getScrollY() - dy);
-                preX = x;
-                preY = y;
+                if(!isScaling && !isTwoFinger) {
+                    int dx = x - preX;
+                    int dy = y - preY;
+                    scrollTo(getScrollX() - dx, getScrollY() - dy);
+                    preX = x;
+                    preY = y;
+                }
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
@@ -335,16 +354,25 @@ public class ChartView extends View {
      * 计算每一个cell的位置
      */
     private void computecellLocation() {
+        float scaleX = getMatrixScaleX();
+        float scaleY = getMatrixScaleY();
+
+        int columnCount = 0;
         int groupSize = cellGroups.size();
         for (int i = 0; i < groupSize; i++) {
             CellGroup cellGroup = cellGroups.get(i);
             cellGroup.setTitle("第" + (i + 1) + "期");
-            cellGroup.setLocation(0, leftBarWidth, cellHeight * i + topBarHeight, cellHeight * (i + 1) + topBarHeight);
+            cellGroup.setLocation(0, leftBarWidth, (int) (cellHeight * scaleY * i + topBarHeight), (int) (cellHeight * scaleY * (i + 1) + topBarHeight));
             List<Cell> cells = cellGroup.getCells();
             int cellSize = cells.size();
+            columnCount = cellSize;
             for (int j = 0; j < cellSize; j++) {
                 Cell cell = cells.get(j);
-                cell.setLocation(cellWidth * j + leftBarWidth, cellWidth * (j + 1) + leftBarWidth, cellHeight * i + topBarHeight, cellHeight * (i + 1) + topBarHeight);
+                cell.setLocation(
+                        (int) (cellWidth * scaleX * j + leftBarWidth),
+                        (int) (cellWidth * scaleX * (j + 1) + leftBarWidth),
+                        (int)(cellHeight * scaleY * i + topBarHeight),
+                        (int)(cellHeight * scaleY * (i + 1) + topBarHeight));
             }
         }
 
@@ -352,8 +380,11 @@ public class ChartView extends View {
         int size = topCells.size();
         for (int i = 0; i < size; i++) {
             Cell cell = topCells.get(i);
-            cell.setLocation(cellWidth * i + leftBarWidth, cellWidth * (i + 1) + leftBarWidth, 0, topBarHeight);
+            cell.setLocation((int) (cellWidth * scaleX * i + leftBarWidth), (int) (cellWidth * scaleX * (i + 1) + leftBarWidth), 0, topBarHeight);
         }
+
+        maxWidth = (int) (columnCount * cellWidth * scaleX + leftBarWidth);
+        maxHeight = (int) (groupSize * cellHeight * scaleY + topBarHeight);
     }
 
     @Override
@@ -541,4 +572,63 @@ public class ChartView extends View {
     private void drawCellTopLine(Canvas canvas, Cell cell) {
         canvas.drawLine(cell.getLeft(), cell.getTop(), cell.getRight(), cell.getTop(), linePaint);
     }
+
+
+
+    private float getTranslateX() {
+        matrix.getValues(m);
+        return m[2];
+    }
+
+    private float getTranslateY() {
+        matrix.getValues(m);
+        return m[5];
+    }
+
+    private float getMatrixScaleY() {
+        matrix.getValues(m);
+        return m[4];
+    }
+
+    private float getMatrixScaleX() {
+        matrix.getValues(m);
+        return m[Matrix.MSCALE_X];
+    }
+
+    //拉伸手势
+    ScaleGestureDetector scaleGestureDetector = new ScaleGestureDetector(getContext(), new ScaleGestureDetector.OnScaleGestureListener() {
+        @Override
+        public boolean onScale(ScaleGestureDetector detector) {
+            isScaling = true;
+            float scaleFactor = detector.getScaleFactor();
+            if (getMatrixScaleY() * scaleFactor > 3) {
+                scaleFactor = 3 / getMatrixScaleY();
+            }
+            if (firstScale) {
+                anchorX = detector.getCurrentSpanX();
+                anchorY = detector.getCurrentSpanY();
+                firstScale = false;
+            }
+
+            if (getMatrixScaleY() * scaleFactor < 0.5) {
+                scaleFactor = 0.5f / getMatrixScaleY();
+            }
+            matrix.postScale(scaleFactor, scaleFactor, anchorX, anchorY);
+            //计算拉伸
+            computecellLocation();
+            invalidate();
+            return true;
+        }
+
+        @Override
+        public boolean onScaleBegin(ScaleGestureDetector detector) {
+            return true;
+        }
+
+        @Override
+        public void onScaleEnd(ScaleGestureDetector detector) {
+            isScaling = false;
+            firstScale = true;
+        }
+    });
 }
