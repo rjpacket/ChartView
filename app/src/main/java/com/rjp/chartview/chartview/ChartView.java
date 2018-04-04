@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import static android.graphics.Color.WHITE;
+
 /**
  * 越界的表格View
  * author : Gimpo create on 2018/4/2 16:29
@@ -34,18 +36,18 @@ public class ChartView extends View {
     public static final int MODE_APPEND = 2;
 
     public int mode = MODE_APPEND;
-    private List<CeilGroup> ceilGroups = new ArrayList<>();
+    private List<CellGroup> cellGroups = new ArrayList<>();
 
-    private int ceilWidth = 100;
-    private int ceilHeight = 100;
+    private int cellWidth = 100;
+    private int cellHeight = 100;
     private int screenWidth;
     private int preX;
     private int preY;
     private Paint linePaint;
-    private Paint backgroundPaint;
     private Paint selectedPaint;
     private Paint linkLinePaint;
     private Paint textPaint;
+    private Paint backgroundPaint;
     private int viewWidth;
     private int viewHeight;
 
@@ -64,9 +66,18 @@ public class ChartView extends View {
     private int backgroundColor;
     private int strokeColor;
     private float linkLineWidth;
-    private float tempCeilWidth;
-    private float tempCeilHeight;
+    private float tempcellWidth;
+    private float tempcellHeight;
     private float txtMidValue;
+
+    //顶部栏可以看成一个CellGroup
+    private List<Cell> topCells;
+    private int leftBarWidth = 240;  //左边栏的高度应该和cell的保持一致就好
+    private int topBarHeight = 160;  //顶部栏的宽度应该和cell的保持一致就好
+    private Paint leftTextPaint;
+    private Paint leftBackgroundPaint;
+    private float leftTxtMidValue;
+    private Paint emptyPaint;
 
     public ChartView(Context context) {
         this(context, null);
@@ -82,13 +93,13 @@ public class ChartView extends View {
             TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.ChartView);
             mode = array.getInt(R.styleable.ChartView_mode, MODE_APPEND);
             columns = array.getInt(R.styleable.ChartView_columns, 8);
-            tempCeilWidth = array.getDimension(R.styleable.ChartView_ceil_width, 100);
-            tempCeilHeight = array.getDimension(R.styleable.ChartView_ceil_height, 100);
+            tempcellWidth = array.getDimension(R.styleable.ChartView_cell_width, 100);
+            tempcellHeight = array.getDimension(R.styleable.ChartView_cell_height, 100);
             numberTextSize = array.getDimension(R.styleable.ChartView_number_size, 32);
             linkLineWidth = array.getDimension(R.styleable.ChartView_link_line_width, 4);
             ballColor = array.getColor(R.styleable.ChartView_ball_color, Color.RED);
             numberNormalColor = array.getColor(R.styleable.ChartView_number_normal_color, Color.BLACK);
-            numberSelectedColor = array.getColor(R.styleable.ChartView_number_selected_color, Color.WHITE);
+            numberSelectedColor = array.getColor(R.styleable.ChartView_number_selected_color, WHITE);
             linkLineColor = array.getColor(R.styleable.ChartView_link_line_color, Color.RED);
             strokeColor = array.getColor(R.styleable.ChartView_stroke_color, Color.BLACK);
             backgroundColor = array.getColor(R.styleable.ChartView_background_color, Color.GRAY);
@@ -96,10 +107,10 @@ public class ChartView extends View {
 
         screenWidth = context.getResources().getDisplayMetrics().widthPixels;
         if (mode == MODE_EQUAL) {
-            ceilWidth = ceilHeight = screenWidth / columns;
+            cellWidth = cellHeight = screenWidth / columns;
         } else if (mode == MODE_APPEND) {
-            ceilWidth = (int) tempCeilWidth;
-            ceilHeight = (int) tempCeilHeight;
+            cellWidth = (int) tempcellWidth;
+            cellHeight = (int) tempcellHeight;
         }
 
         linePaint = new Paint();
@@ -127,62 +138,96 @@ public class ChartView extends View {
         Paint.FontMetrics fontMetrics = textPaint.getFontMetrics();
         txtMidValue = (fontMetrics.top + fontMetrics.bottom) / 2;
 
+        leftTextPaint = new Paint();
+        leftTextPaint.setAntiAlias(true);
+        leftTextPaint.setTextAlign(Paint.Align.CENTER);
+        leftTextPaint.setColor(WHITE);
+        leftTextPaint.setTextSize(40);
+        Paint.FontMetrics fontMetrics1 = leftTextPaint.getFontMetrics();
+        leftTxtMidValue = (fontMetrics1.top + fontMetrics1.bottom) / 2;
+
+        leftBackgroundPaint = new Paint();
+        leftBackgroundPaint.setAntiAlias(true);
+        leftBackgroundPaint.setColor(Color.CYAN);
+
+        emptyPaint = new Paint();
+        emptyPaint.setAntiAlias(true);
+        emptyPaint.setColor(Color.WHITE);
+
         // 新增部分 start
         ViewConfiguration viewConfiguration = ViewConfiguration.get(context);
         mScroller = new Scroller(context);
         mMinimumVelocity = viewConfiguration.getScaledMinimumFlingVelocity();
         mMaximumVelocity = viewConfiguration.getScaledMaximumFlingVelocity();
 
-        Ceil preCeil = null;
+        //顶部栏初始化的时候传递
+        topCells = new ArrayList<>();
+        for (int j = 0; j < 40; j++) {
+            Cell e1 = new Cell();
+            e1.setNumber(String.valueOf(j + 1));
+            topCells.add(e1);
+        }
+
+        Cell precell = null;
         Random random = new Random();
         for (int i = 0; i < 300; i++) {
-            CeilGroup e = new CeilGroup();
-            ArrayList<Ceil> ceils = new ArrayList<>();
+            CellGroup e = new CellGroup();
+            ArrayList<Cell> cells = new ArrayList<>();
             int selectedIndex = random.nextInt(30);
             for (int j = 0; j < 40; j++) {
-                Ceil e1 = new Ceil();
+                Cell e1 = new Cell();
                 e1.setNumber(String.valueOf(j));
                 if (j == selectedIndex) {
                     e1.setSelected(true);
                     e1.setColor(Color.RED);
                 }
-                ceils.add(e1);
-                if (preCeil != null && e1.isSelected()) {
-                    e1.setNextCeil(i == 0 ? null : preCeil);
+                cells.add(e1);
+                if (precell != null && e1.isSelected()) {
+                    e1.setNextCell(i == 0 ? null : precell);
                 }
                 if (e1.isSelected()) {
-                    preCeil = e1;
+                    precell = e1;
                 }
             }
-            e.setCeils(ceils);
-            ceilGroups.add(e);
+            e.setCells(cells);
+            cellGroups.add(e);
         }
-        maxWidth = 40 * ceilWidth;
-        maxHeight = 300 * ceilHeight;
+        maxWidth = 40 * cellWidth + leftBarWidth;
+        maxHeight = 300 * cellHeight + topBarHeight;
     }
 
     /**
      * 新增一个隔壁的表格
      *
-     * @param blueCeilsGroup
+     * @param bluecellsGroup
      */
-    public void addAnotherChart(List<CeilGroup> blueCeilsGroup) {
+    public void addAnotherChart(List<CellGroup> bluecellsGroup) {
+        boolean isTopBarAdd = false;
+        //顶部栏也加一个空的cell
+        topCells.add(new Cell());
         int columnCount = 0;
-        int groupSize = ceilGroups.size();
+        int groupSize = cellGroups.size();
         for (int i = 0; i < groupSize; i++) {
-            List<Ceil> oldCeils = ceilGroups.get(i).getCeils();
-            CeilGroup ceilGroup = blueCeilsGroup.get(i);
-            List<Ceil> newCeils = ceilGroup.getCeils();
-            //中间增加一个空的ceil
-            oldCeils.add(new Ceil());
-            for (Ceil newCeil : newCeils) {
-                oldCeils.add(newCeil);
+            List<Cell> oldcells = cellGroups.get(i).getCells();
+            CellGroup cellGroup = bluecellsGroup.get(i);
+            List<Cell> newcells = cellGroup.getCells();
+            //中间增加一个空的cell
+            oldcells.add(new Cell());
+            int size = newcells.size();
+            for (int j = 0; j < size; j++) {
+                if(!isTopBarAdd){
+                    Cell tc = new Cell();
+                    tc.setNumber(String.valueOf(j + 1));
+                    topCells.add(tc);
+                }
+                oldcells.add(newcells.get(j));
             }
-            columnCount = oldCeils.size();
+            isTopBarAdd = true;  //顶部栏的cell只需要添加一次就好
+            columnCount = oldcells.size();
         }
-        maxWidth = columnCount * ceilWidth;
-        maxHeight = groupSize * ceilHeight;
-        computeCeilLocation();
+        maxWidth = columnCount * cellWidth + leftBarWidth;
+        maxHeight = groupSize * cellHeight + topBarHeight;
+        computecellLocation();
     }
 
     @Override
@@ -283,144 +328,217 @@ public class ChartView extends View {
         viewWidth = MeasureSpec.getSize(widthMeasureSpec);
         viewHeight = MeasureSpec.getSize(heightMeasureSpec);
         setMeasuredDimension(viewWidth, viewHeight);
-        computeCeilLocation();
+        computecellLocation();
     }
 
     /**
-     * 计算每一个ceil的位置
+     * 计算每一个cell的位置
      */
-    private void computeCeilLocation() {
-        int groupSize = ceilGroups.size();
+    private void computecellLocation() {
+        int groupSize = cellGroups.size();
         for (int i = 0; i < groupSize; i++) {
-            CeilGroup ceilGroup = ceilGroups.get(i);
-            List<Ceil> ceils = ceilGroup.getCeils();
-            int ceilSize = ceils.size();
-            for (int j = 0; j < ceilSize; j++) {
-                Ceil ceil = ceils.get(j);
-                ceil.setLocation(ceilWidth * j, ceilWidth * (j + 1), ceilHeight * i, ceilHeight * (i + 1));
+            CellGroup cellGroup = cellGroups.get(i);
+            cellGroup.setTitle("第" + (i + 1) + "期");
+            cellGroup.setLocation(0, leftBarWidth, cellHeight * i + topBarHeight, cellHeight * (i + 1) + topBarHeight);
+            List<Cell> cells = cellGroup.getCells();
+            int cellSize = cells.size();
+            for (int j = 0; j < cellSize; j++) {
+                Cell cell = cells.get(j);
+                cell.setLocation(cellWidth * j + leftBarWidth, cellWidth * (j + 1) + leftBarWidth, cellHeight * i + topBarHeight, cellHeight * (i + 1) + topBarHeight);
             }
+        }
+
+        //计算顶部栏的位置
+        int size = topCells.size();
+        for (int i = 0; i < size; i++) {
+            Cell cell = topCells.get(i);
+            cell.setLocation(cellWidth * i + leftBarWidth, cellWidth * (i + 1) + leftBarWidth, 0, topBarHeight);
         }
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
-        int groupSize = ceilGroups.size();
+        int groupSize = cellGroups.size();
         for (int i = 0; i < groupSize; i++) {
-            CeilGroup ceilGroup = ceilGroups.get(i);
-            List<Ceil> ceils = ceilGroup.getCeils();
-            int ceilSize = ceils.size();
-            for (int j = 0; j < ceilSize; j++) {
-                Ceil ceil = ceils.get(j);
-                if (isCeilVisiable(ceil)) {
-                    drawCeilTopLine(canvas, ceil);
-                    drawCeilLeftLine(canvas, ceil);
-                    drawCeilBackground(canvas, ceil);
+            CellGroup cellGroup = cellGroups.get(i);
+            drawCellGroupLeftTitle(canvas, cellGroup);
+            List<Cell> cells = cellGroup.getCells();
+            int cellSize = cells.size();
+            for (int j = 0; j < cellSize; j++) {
+                Cell cell = cells.get(j);
+                if (isCellVisiable(cell)) {
+                    drawCellTopLine(canvas, cell);
+                    drawCellLeftLine(canvas, cell);
+                    drawCellBackground(canvas, cell);
                 }
             }
         }
 
         for (int i = 0; i < groupSize; i++) {
-            CeilGroup ceilGroup = ceilGroups.get(i);
-            List<Ceil> ceils = ceilGroup.getCeils();
-            int ceilSize = ceils.size();
-            for (int j = 0; j < ceilSize; j++) {
-                Ceil ceil = ceils.get(j);
-                drawCeilLinkLine(canvas, ceil);
+            CellGroup cellGroup = cellGroups.get(i);
+            List<Cell> cells = cellGroup.getCells();
+            int cellSize = cells.size();
+            for (int j = 0; j < cellSize; j++) {
+                Cell cell = cells.get(j);
+                drawCellLinkLine(canvas, cell);
             }
         }
 
         for (int i = 0; i < groupSize; i++) {
-            CeilGroup ceilGroup = ceilGroups.get(i);
-            List<Ceil> ceils = ceilGroup.getCeils();
-            int ceilSize = ceils.size();
-            for (int j = 0; j < ceilSize; j++) {
-                Ceil ceil = ceils.get(j);
-                if (isCeilVisiable(ceil)) {
-                    drawCeilSelected(canvas, ceil);
-                    drawCeilText(canvas, ceil);
+            CellGroup cellGroup = cellGroups.get(i);
+            List<Cell> cells = cellGroup.getCells();
+            int cellSize = cells.size();
+            for (int j = 0; j < cellSize; j++) {
+                Cell cell = cells.get(j);
+                if (isCellVisiable(cell)) {
+                    drawCellSelected(canvas, cell);
+                    drawCellText(canvas, cell);
                 }
+            }
+        }
+
+        //最后绘制左边栏和顶部栏，可以有一个覆盖的效果
+        //左边栏
+        for (int i = 0; i < groupSize; i++) {
+            CellGroup cellGroup = cellGroups.get(i);
+            drawCellGroupLeftTitle(canvas, cellGroup);
+        }
+
+
+        for (Cell cell : topCells) {
+            drawTopBarTitle(canvas, cell);
+        }
+
+        //绘制左上角的空白区域
+        canvas.drawRect(getScrollX(), getScrollY(), leftBarWidth + getScrollX(), topBarHeight + getScrollY(), emptyPaint);
+    }
+
+    /**
+     * 绘制顶部栏
+     * @param canvas
+     * @param cell
+     */
+    private void drawTopBarTitle(Canvas canvas, Cell cell) {
+        if (isTopBarVisiable(cell)) {
+            String number = cell.getNumber();
+            if(!TextUtils.isEmpty(number)) {
+                canvas.drawRect(cell.getLeft(), cell.getTop() + getScrollY(), cell.getRight(), cell.getBottom() + getScrollY(), leftBackgroundPaint);
+                canvas.drawText(number, cell.getCenterX(), cell.getCenterY() - leftTxtMidValue + getScrollY(), leftTextPaint);
+            }else{
+                //如果顶部栏是空，就绘制一个白块
+                canvas.drawRect(cell.getLeft(), cell.getTop() + getScrollY(), cell.getRight(), cell.getBottom() + getScrollY(), emptyPaint);
             }
         }
     }
 
     /**
-     * 判断ceil是否可见
-     *
-     * @param ceil
+     * 顶部栏是否出现在屏幕中
+     * @param cell
      * @return
      */
-    private boolean isCeilVisiable(Ceil ceil) {
-        return ceil.getRight() > getScrollX() && ceil.getBottom() > getScrollY() && ceil.getLeft() < viewWidth + getScrollX() && ceil.getTop() < viewHeight + getScrollY();
+    private boolean isTopBarVisiable(Cell cell) {
+        return cell.getRight() > leftBarWidth + getScrollX() && cell.getLeft() < viewWidth + getScrollX();
     }
 
     /**
-     * 绘制ceil的文字
+     * 绘制左边栏的标题
+     * @param canvas
+     * @param cellGroup
+     */
+    private void drawCellGroupLeftTitle(Canvas canvas, CellGroup cellGroup) {
+        if (isLeftBarVisiable(cellGroup)) {
+            canvas.drawRect(cellGroup.getLeft() + getScrollX(), cellGroup.getTop(), cellGroup.getRight() + getScrollX(), cellGroup.getBottom(), leftBackgroundPaint);
+            canvas.drawText(cellGroup.getTitle(), cellGroup.getCenterX() + getScrollX(), cellGroup.getCenterY() - leftTxtMidValue, leftTextPaint);
+        }
+    }
+
+    /**
+     * 左边栏是否出现在屏幕中
+     * @param cellGroup
+     * @return
+     */
+    private boolean isLeftBarVisiable(CellGroup cellGroup) {
+        return cellGroup.getBottom() > topBarHeight + getScrollY() && cellGroup.getTop() < viewHeight + getScrollY();
+    }
+
+    /**
+     * 判断cell是否可见
+     *
+     * @param cell
+     * @return
+     */
+    private boolean isCellVisiable(Cell cell) {
+        return cell.getRight() > getScrollX() + leftBarWidth && cell.getBottom() > getScrollY() + topBarHeight && cell.getLeft() < viewWidth + getScrollX() && cell.getTop() < viewHeight + getScrollY();
+    }
+
+    /**
+     * 绘制cell的文字
      *
      * @param canvas
-     * @param ceil
+     * @param cell
      */
-    private void drawCeilText(Canvas canvas, Ceil ceil) {
-        textPaint.setColor(ceil.isSelected() ? numberSelectedColor : numberNormalColor);
-        String number = ceil.getNumber();
+    private void drawCellText(Canvas canvas, Cell cell) {
+        textPaint.setColor(cell.isSelected() ? numberSelectedColor : numberNormalColor);
+        String number = cell.getNumber();
         if (!TextUtils.isEmpty(number)) {
-            canvas.drawText(number, ceil.getCenterX(), ceil.getCenterY() - txtMidValue, textPaint);
+            canvas.drawText(number, cell.getCenterX(), cell.getCenterY() - txtMidValue, textPaint);
         }
     }
 
     /**
-     * 绘制ceil的背景
+     * 绘制cell的背景
      *
      * @param canvas
-     * @param ceil
+     * @param cell
      */
-    private void drawCeilBackground(Canvas canvas, Ceil ceil) {
-        canvas.drawRect(ceil.getLeft(), ceil.getTop(), ceil.getRight(), ceil.getBottom(), backgroundPaint);
+    private void drawCellBackground(Canvas canvas, Cell cell) {
+        canvas.drawRect(cell.getLeft(), cell.getTop(), cell.getRight(), cell.getBottom(), backgroundPaint);
     }
 
     /**
-     * 设置ceil选中的效果
+     * 设置cell选中的效果
      *
      * @param canvas
-     * @param ceil
+     * @param cell
      */
-    private void drawCeilSelected(Canvas canvas, Ceil ceil) {
-        if (ceil.isSelected()) {
-            selectedPaint.setColor(ceil.getColor());
-            canvas.drawOval(new RectF(ceil.getLeft(), ceil.getTop(), ceil.getRight(), ceil.getBottom()), selectedPaint);
+    private void drawCellSelected(Canvas canvas, Cell cell) {
+        if (cell.isSelected()) {
+            selectedPaint.setColor(cell.getColor());
+            canvas.drawOval(new RectF(cell.getLeft(), cell.getTop(), cell.getRight(), cell.getBottom()), selectedPaint);
         }
     }
 
     /**
-     * 绘制ceil的连线
+     * 绘制cell的连线
      *
      * @param canvas
-     * @param ceil
+     * @param cell
      */
-    private void drawCeilLinkLine(Canvas canvas, Ceil ceil) {
-        Ceil nextCeil = ceil.getNextCeil();
-        if (nextCeil != null) {
-            linkLinePaint.setColor(ceil.getColor());
-            canvas.drawLine(nextCeil.getCenterX(), nextCeil.getCenterY(), ceil.getCenterX(), ceil.getCenterY(), linkLinePaint);
+    private void drawCellLinkLine(Canvas canvas, Cell cell) {
+        Cell nextcell = cell.getNextCell();
+        if (nextcell != null) {
+            linkLinePaint.setColor(cell.getColor());
+            canvas.drawLine(nextcell.getCenterX(), nextcell.getCenterY(), cell.getCenterX(), cell.getCenterY(), linkLinePaint);
         }
     }
 
     /**
-     * 绘制ceil左边的分割线
+     * 绘制cell左边的分割线
      *
      * @param canvas
-     * @param ceil
+     * @param cell
      */
-    private void drawCeilLeftLine(Canvas canvas, Ceil ceil) {
-        canvas.drawLine(ceil.getLeft(), ceil.getTop(), ceil.getLeft(), ceil.getBottom(), linePaint);
+    private void drawCellLeftLine(Canvas canvas, Cell cell) {
+        canvas.drawLine(cell.getLeft(), cell.getTop(), cell.getLeft(), cell.getBottom(), linePaint);
     }
 
     /**
-     * 绘制ceil顶部的分割线
+     * 绘制cell顶部的分割线
      *
      * @param canvas
-     * @param ceil
+     * @param cell
      */
-    private void drawCeilTopLine(Canvas canvas, Ceil ceil) {
-        canvas.drawLine(ceil.getLeft(), ceil.getTop(), ceil.getRight(), ceil.getTop(), linePaint);
+    private void drawCellTopLine(Canvas canvas, Cell cell) {
+        canvas.drawLine(cell.getLeft(), cell.getTop(), cell.getRight(), cell.getTop(), linePaint);
     }
 }

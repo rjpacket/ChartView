@@ -3,8 +3,8 @@
     <declare-styleable name="ChartView">
         <attr name="mode" format="integer"/>
         <attr name="columns" format="integer" />
-        <attr name="ceil_width" format="dimension" />
-        <attr name="ceil_height" format="dimension" />
+        <attr name="cell_width" format="dimension" />
+        <attr name="cell_height" format="dimension" />
         <attr name="number_size" format="dimension" />
         <attr name="ball_color" format="color" />
         <attr name="number_normal_color" format="color" />

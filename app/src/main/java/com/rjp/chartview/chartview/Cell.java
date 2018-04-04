@@ -5,7 +5,7 @@ package com.rjp.chartview.chartview;
  * email  : jimbo922@163.com
  */
 
-public class Ceil {
+public class Cell {
     private int left;
     private int top;
     private int right;
@@ -16,7 +16,7 @@ public class Ceil {
 
     private boolean isSelected;
 
-    private Ceil nextCeil;
+    private Cell nextCell;
 
     private String number;
 
@@ -88,12 +88,12 @@ public class Ceil {
         isSelected = selected;
     }
 
-    public Ceil getNextCeil() {
-        return nextCeil;
+    public Cell getNextCell() {
+        return nextCell;
     }
 
-    public void setNextCeil(Ceil nextCeil) {
-        this.nextCeil = nextCeil;
+    public void setNextCell(Cell nextCeil) {
+        this.nextCell = nextCeil;
     }
 
     public String getNumber() {
